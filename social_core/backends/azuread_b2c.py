@@ -30,11 +30,10 @@ See https://nicksnettravels.builttoroam.com/post/2017/01/24/Verifying-Azure-Acti
 import json
 
 from cryptography.hazmat.primitives import serialization
-from jwt import DecodeError, ExpiredSignatureError, get_unverified_header
-from jwt import decode as jwt_decode
+from jwt import DecodeError
 from jwt.algorithms import RSAAlgorithm
 
-from ..exceptions import AuthException, AuthTokenError
+from ..exceptions import AuthException
 from .azuread import AzureADOAuth2
 
 
@@ -164,23 +163,3 @@ class AzureADB2COAuth2(AzureADOAuth2):
             if key["kid"] == kid:
                 return self.jwt_key_to_pem(key)
         raise DecodeError(f"Cannot find kid={kid}")
-
-    def user_data(self, access_token, *args, **kwargs):
-        response = kwargs.get("response")
-
-        id_token = response.get("id_token")
-
-        # `kid` is short for key id
-        kid = get_unverified_header(id_token)["kid"]
-        key = self.get_public_key(kid)
-
-        try:
-            return jwt_decode(
-                id_token,
-                key=key,
-                algorithms=["RS256"],
-                audience=self.setting("KEY"),
-                leeway=self.setting("JWT_LEEWAY", default=0),
-            )
-        except (DecodeError, ExpiredSignatureError) as error:
-            raise AuthTokenError(self, error)

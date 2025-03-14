@@ -1,8 +1,5 @@
 import time
 
-import jwt
-
-from ..exceptions import AuthTokenError
 from .oauth import BaseOAuth2
 
 """
@@ -99,16 +96,13 @@ class AzureADOAuth2(BaseOAuth2):
 
     def user_data(self, access_token, *args, **kwargs):
         response = kwargs.get("response")
+
         if response and response.get("id_token"):
             id_token = response.get("id_token")
         else:
             id_token = access_token
 
-        try:
-            decoded_id_token = jwt.decode(id_token, options={"verify_signature": False})
-        except (jwt.DecodeError, jwt.ExpiredSignatureError) as de:
-            raise AuthTokenError(self, de)
-        return decoded_id_token
+        return self.validate_and_return_id_token(id_token, access_token)
 
     def auth_extra_arguments(self):
         """Return extra arguments needed on auth process. The defaults can be
